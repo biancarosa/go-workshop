@@ -106,17 +106,19 @@ func main() {
 		queries := r.URL.Query()["query"]
 		list := make([]*SearchResponse, len(queries))
 		for i, q := range queries {
-			s, err := search(q)
-			if err != nil {
-				w.WriteHeader(http.StatusInternalServerError)
-				json.NewEncoder(w).Encode(struct {
-					Error string `json:"error"`
-				}{
-					Error: err.Error(),
-				})
-				return
-			}
-			list[i] = s
+			go func(i int) {
+				s, err := search(q)
+				if err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					json.NewEncoder(w).Encode(struct {
+						Error string `json:"error"`
+					}{
+						Error: err.Error(),
+					})
+					return
+				}
+				list[i] = s
+			}(i)
 		}
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(list)

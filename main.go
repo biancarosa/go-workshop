@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"sync"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -105,8 +106,12 @@ func main() {
 
 		queries := r.URL.Query()["query"]
 		list := make([]*SearchResponse, len(queries))
+
+		var wg sync.WaitGroup
+		wg.Add(len(list))
 		for i, q := range queries {
 			go func(i int) {
+				defer wg.Done()
 				s, err := search(q)
 				if err != nil {
 					w.WriteHeader(http.StatusInternalServerError)
@@ -120,6 +125,8 @@ func main() {
 				list[i] = s
 			}(i)
 		}
+		wg.Wait()
+
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(list)
 	})

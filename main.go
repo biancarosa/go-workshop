@@ -101,20 +101,25 @@ func main() {
 	log.SetLevel(log.DebugLevel)
 
 	http.HandleFunc("/search", func(w http.ResponseWriter, r *http.Request) {
-		query := r.URL.Query()["query"]
-		s, err := search(query[0])
 		w.Header().Set("Content-Type", "application/json")
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			json.NewEncoder(w).Encode(struct {
-				Error string `json:"error"`
-			}{
-				Error: err.Error(),
-			})
-			return
+
+		queries := r.URL.Query()["query"]
+		list := make([]*SearchResponse, len(queries))
+		for i, q := range queries {
+			s, err := search(q)
+			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				json.NewEncoder(w).Encode(struct {
+					Error string `json:"error"`
+				}{
+					Error: err.Error(),
+				})
+				return
+			}
+			list[i] = s
 		}
 		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(s)
+		json.NewEncoder(w).Encode(list)
 	})
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
